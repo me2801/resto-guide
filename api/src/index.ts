@@ -91,10 +91,16 @@ app.get('/api/redoc', (_req, res) => {
 app.set('trust proxy', 1);
 const sessionConfig = getSessionConfig();
 const sameSiteEnv = (process.env.METASUITE_COOKIE_SAMESITE || '').toLowerCase();
+const fallbackSameSite = !sameSiteEnv && config.frontendUrl.startsWith('https://')
+  ? 'none'
+  : '';
 if (sameSiteEnv) {
   (sessionConfig.cookie as any).sameSite = sameSiteEnv;
 }
-if (sameSiteEnv === 'none') {
+if (fallbackSameSite) {
+  (sessionConfig.cookie as any).sameSite = fallbackSameSite;
+}
+if (sameSiteEnv === 'none' || fallbackSameSite === 'none') {
   sessionConfig.cookie.secure = true;
 }
 app.use(session(sessionConfig));

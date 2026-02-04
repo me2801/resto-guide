@@ -16,7 +16,8 @@ export const config = {
   cookieName: process.env.METASUITE_SESSION_COOKIE_NAME || 'metasuite_session',
   secureCookies: process.env.METASUITE_SECURE_COOKIES === 'true',
   dbPrefix: process.env.DB_PREFIX || 'resto_poc_',
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  // TODO: hardcoded fallback for Render test; replace with envs when confirmed.
+  frontendUrl: process.env.FRONTEND_URL || 'https://resto-guide.onrender.com',
   frontendUrls: [
     process.env.FRONTEND_URL,
     process.env.FRONTEND_MOBILE_URL,
