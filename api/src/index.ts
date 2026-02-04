@@ -50,6 +50,29 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
+let lastLoginDebug: Record<string, any> | null = null;
+
+if (config.debug) {
+  app.use((req, res, next) => {
+    if (req.path === '/auth/api/login') {
+      res.on('finish', () => {
+        lastLoginDebug = {
+          timestamp: new Date().toISOString(),
+          status: res.statusCode,
+          origin: req.headers.origin,
+          host: req.headers.host,
+          userAgent: req.headers['user-agent'],
+          allowOrigin: res.getHeader('access-control-allow-origin'),
+          allowCredentials: res.getHeader('access-control-allow-credentials'),
+          setCookie: res.getHeader('set-cookie'),
+        };
+        console.log('[DEBUG] /auth/api/login response', lastLoginDebug);
+      });
+    }
+    next();
+  });
+}
+
 // CORS configuration
 const allowedOrigins = config.frontendUrls.length
   ? config.frontendUrls
@@ -122,6 +145,39 @@ app.use(registerAuth({
   loginApiPath: '/auth/api/login',
   logoutPath: '/auth/logout',
 }));
+
+if (config.debug) {
+  app.get('/api/debug/auth', (req, res) => {
+    const cookieHeader = req.headers.cookie || '';
+    const cookieNames = cookieHeader
+      .split(';')
+      .map((chunk) => chunk.trim().split('=')[0])
+      .filter(Boolean);
+
+    res.json({
+      origin: req.headers.origin,
+      host: req.headers.host,
+      userAgent: req.headers['user-agent'],
+      cookieHeaderPresent: Boolean(cookieHeader),
+      cookieNames,
+      sessionCookieName: config.cookieName,
+      isAuthenticated: isAuthenticated(req),
+      isAdmin: isAdmin(req),
+      sameSiteEnv: (process.env.METASUITE_COOKIE_SAMESITE || '').toLowerCase() || null,
+      secureCookiesEnv: process.env.METASUITE_SECURE_COOKIES || null,
+      allowedOrigins,
+    });
+  });
+
+  app.get('/api/debug/last-login', (_req, res) => {
+    res.json({
+      lastLoginDebug,
+      note: lastLoginDebug
+        ? 'This is the most recent /auth/api/login response captured by the API process.'
+        : 'No login captured yet on this API instance.',
+    });
+  });
+}
 
 // Health check
 app.get('/api/health', async (_req, res) => {
