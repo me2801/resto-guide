@@ -17,13 +17,6 @@ export default function WebLoginClient() {
     return next || '/web';
   }, [searchParams]);
 
-  const queryError = useMemo(() => {
-    if (searchParams.get('error') === 'not_admin') {
-      return 'Admin access required.';
-    }
-    return null;
-  }, [searchParams]);
-
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -63,9 +56,7 @@ export default function WebLoginClient() {
           <p>Manage curated restaurants</p>
         </div>
 
-        {(error || queryError) && (
-          <div className="alert alert--error">{error || queryError}</div>
-        )}
+        {error && <div className="alert alert--error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
