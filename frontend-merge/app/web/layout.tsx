@@ -8,28 +8,46 @@ import './globals.css';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const basePath = '/web';
+  const isAuthRoute = pathname?.startsWith(`${basePath}/auth`);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(!isAuthRoute);
 
   useEffect(() => {
+    if (isAuthRoute) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    let cancelled = false;
     api.getMe()
       .then((userData) => {
+        if (cancelled) return;
         setUser(userData);
         if (!userData.roles?.includes('admin')) {
           window.location.href = `${basePath}/auth/login?error=not_admin`;
         }
       })
       .catch(() => {
+        if (cancelled) return;
         window.location.href = `${basePath}/auth/login`;
       })
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthRoute]);
 
   const handleLogout = async () => {
     await logout();
     window.location.href = `${basePath}/auth/login`;
   };
+
+  if (isAuthRoute) {
+    return <div className="admin-auth">{children}</div>;
+  }
 
   if (loading) {
     return (

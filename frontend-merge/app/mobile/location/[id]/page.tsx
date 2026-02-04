@@ -1,18 +1,29 @@
 import LocationDetailClient from './location-detail-client';
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
+const STATIC_LOCATION_IDS = (process.env.NEXT_PUBLIC_STATIC_LOCATION_IDS || '')
+  .split(',')
+  .map((id) => id.trim())
+  .filter(Boolean);
+const FALLBACK_PARAMS = STATIC_LOCATION_IDS.map((id) => ({ id }));
+const ensureParams = (params: { id: string }[]) =>
+  params.length ? params : FALLBACK_PARAMS.length ? FALLBACK_PARAMS : [{ id: 'placeholder' }];
+
 export const dynamicParams = false;
 export const dynamic = 'force-static';
 
 export async function generateStaticParams() {
-  if (!API_BASE) return [];
+  if (!API_BASE) return ensureParams([]);
   try {
     const res = await fetch(`${API_BASE}/api/locations`, { cache: 'no-store' });
-    if (!res.ok) return [];
+    if (!res.ok) return ensureParams([]);
     const locations = await res.json();
-    return Array.isArray(locations) ? locations.map((loc) => ({ id: loc.id })) : [];
+    const params = Array.isArray(locations)
+      ? locations.map((loc) => ({ id: String(loc.id) }))
+      : [];
+    return ensureParams(params);
   } catch {
-    return [];
+    return ensureParams([]);
   }
 }
 
