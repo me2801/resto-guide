@@ -51,8 +51,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 // CORS configuration
+const allowedOrigins = config.frontendUrls.length
+  ? config.frontendUrls
+  : [config.frontendUrl];
 app.use(cors({
-  origin: config.frontendUrl,
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true,
 }));
 

@@ -64,10 +64,14 @@ export default function MobileLoginClient() {
             <input
               className="form-input"
               type="email"
+              name="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              autoComplete="email"
+              autoComplete="username"
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
               required
             />
           </div>
@@ -76,6 +80,7 @@ export default function MobileLoginClient() {
             <input
               className="form-input"
               type="password"
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"

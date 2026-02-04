@@ -17,6 +17,14 @@ export const config = {
   secureCookies: process.env.METASUITE_SECURE_COOKIES === 'true',
   dbPrefix: process.env.DB_PREFIX || 'resto_poc_',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  frontendUrls: [
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_MOBILE_URL,
+    process.env.FRONTEND_WEB_URL,
+    ...(process.env.FRONTEND_URLS || '').split(','),
+  ]
+    .map((url) => (url || '').trim())
+    .filter(Boolean),
 };
 
 // Debug logger
