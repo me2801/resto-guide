@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(npm install)",
+      "Bash(timeout 5 npm run dev)",
+      "Bash(curl:*)",
+      "Bash(timeout 10 npm run dev:*)",
+      "Bash(timeout 8 npm run dev:*)"
+    ]
+  }
+}
