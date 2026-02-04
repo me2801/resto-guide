@@ -136,6 +136,19 @@ class SupabaseAuthClient {
     if (error || !user) return null;
     return user;
   }
+
+  async checkAuthHealth(): Promise<{ configured: boolean; ok: boolean; error?: string }> {
+    if (!isConfigured()) {
+      return { configured: false, ok: false, error: 'Not configured' };
+    }
+
+    try {
+      const { error } = await this.client.auth.getSession();
+      return { configured: true, ok: !error, error: error?.message };
+    } catch (err) {
+      return { configured: true, ok: false, error: String(err) };
+    }
+  }
 }
 
 let _client: SupabaseAuthClient | null = null;
