@@ -13,6 +13,10 @@ const options: swaggerJsdoc.Options = {
         url: '/api',
         description: 'API endpoints',
       },
+      {
+        url: '/',
+        description: 'Auth endpoints',
+      },
     ],
     components: {
       schemas: {
@@ -72,6 +76,23 @@ const options: swaggerJsdoc.Options = {
             error: { type: 'string' },
           },
         },
+        AuthLoginRequest: {
+          type: 'object',
+          required: ['email', 'password'],
+          properties: {
+            email: { type: 'string', format: 'email' },
+            password: { type: 'string' },
+            next: { type: 'string', description: 'Optional redirect path after login' },
+          },
+        },
+        AuthLoginResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            redirect: { type: 'string' },
+            error: { type: 'string' },
+          },
+        },
       },
       securitySchemes: {
         cookieAuth: {
@@ -82,6 +103,42 @@ const options: swaggerJsdoc.Options = {
       },
     },
     paths: {
+      '/auth/api/login': {
+        post: {
+          summary: 'Login (auth API)',
+          tags: ['Auth'],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AuthLoginRequest' },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Login successful',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/AuthLoginResponse' },
+                },
+              },
+            },
+            '400': { description: 'Missing credentials' },
+            '401': { description: 'Invalid credentials' },
+            '503': { description: 'Auth not configured' },
+          },
+        },
+      },
+      '/auth/logout': {
+        get: {
+          summary: 'Logout (clears session)',
+          tags: ['Auth'],
+          responses: {
+            '200': { description: 'Logged out' },
+          },
+        },
+      },
       '/health': {
         get: {
           summary: 'Health check',

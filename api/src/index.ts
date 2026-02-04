@@ -80,7 +80,17 @@ app.get('/api/redoc', (_req, res) => {
 });
 
 // Session middleware
-app.use(session(getSessionConfig()));
+// For cross-site auth (frontend + API on different domains), SameSite must be "none" and Secure must be true.
+app.set('trust proxy', 1);
+const sessionConfig = getSessionConfig();
+const sameSiteEnv = (process.env.METASUITE_COOKIE_SAMESITE || '').toLowerCase();
+if (sameSiteEnv) {
+  (sessionConfig.cookie as any).sameSite = sameSiteEnv;
+}
+if (sameSiteEnv === 'none') {
+  sessionConfig.cookie.secure = true;
+}
+app.use(session(sessionConfig));
 
 // Custom static files (serve before auth to override default CSS)
 const staticDir = existsSync(join(__dirname, '..', 'static'))
