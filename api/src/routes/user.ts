@@ -1,6 +1,6 @@
 import { Router, Request } from 'express';
 import { getDb, t } from '../db.js';
-import { getUser, getUserId } from 'supabase-auth-js/api';
+import { getUser, getUserId } from '../auth/index.js';
 
 const router = Router();
 

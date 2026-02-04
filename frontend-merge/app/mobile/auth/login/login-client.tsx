@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { setAuthToken } from '@/lib/mobile/api';
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
 
@@ -37,7 +38,13 @@ export default function MobileLoginClient() {
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(payload.error || 'Authentication failed.');
+        setAuthToken(null);
         return;
+      }
+      if (payload?.token) {
+        setAuthToken(payload.token);
+      } else {
+        setAuthToken(null);
       }
       window.location.href = payload.redirect || nextPath;
     } catch {

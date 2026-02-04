@@ -6,8 +6,15 @@ import { dirname, join } from 'path';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { config } from './config.js';
-import { getSessionConfig } from 'supabase-auth-js';
-import { registerAuth, isAuthenticated, isAdmin } from 'supabase-auth-js/api';
+import {
+  getSessionConfig,
+  registerAuth,
+  isAuthenticated,
+  isAdmin,
+  requireAuthApi,
+  requireAdminApi,
+  getClient,
+} from './auth/index.js';
 import { publicRoutes } from './routes/public.js';
 import { userRoutes } from './routes/user.js';
 import { adminRoutes } from './routes/admin.js';
@@ -22,28 +29,6 @@ if (config.debug) {
     frontendUrl: config.frontendUrl,
     dbPrefix: config.dbPrefix,
   });
-}
-
-// Auth middleware for API routes
-function requireAuthApi() {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!isAuthenticated(req)) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    next();
-  };
-}
-
-function requireAdminApi() {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!isAuthenticated(req)) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    if (!isAdmin(req)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-    next();
-  };
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -185,7 +170,6 @@ app.get('/api/health', async (_req, res) => {
 
   // Check auth service
   try {
-    const { getClient } = await import('supabase-auth-js');
     const client = getClient();
     checks.auth = await client.checkAuthHealth();
   } catch (err: any) {

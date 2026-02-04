@@ -2,6 +2,29 @@ import { debug } from './debug';
 
 // Use absolute backend URL for static export
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
+const TOKEN_STORAGE_KEY = 'resto_auth_token';
+
+export function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthToken(token: string | null) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (token) {
+      window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    } else {
+      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage errors (private mode, disabled storage)
+  }
+}
 
 interface FetchOptions extends RequestInit {
   params?: Record<string, string | number | undefined>;
@@ -27,11 +50,13 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
 
   debug.log(`API Request: ${fetchOptions.method || 'GET'} ${url}`);
 
+  const token = getAuthToken();
   const response = await fetch(url, {
     ...fetchOptions,
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...fetchOptions.headers,
     },
   });
