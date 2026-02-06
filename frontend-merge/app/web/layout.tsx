@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { api, logout, User } from '@/lib/web/api';
+import { getSupabaseClient, hasAppAccess, appTag } from '@/lib/supabaseClient';
 import { withBase } from '@/lib/basePath';
 import './globals.css';
 
@@ -21,6 +22,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     }
     setLoading(true);
     let cancelled = false;
+    const validateSession = async () => {
+      const client = getSupabaseClient();
+      if (!client) return;
+      const { data } = await client.auth.getSession();
+      if (data.session?.user && !hasAppAccess(data.session.user)) {
+        await client.auth.signOut();
+        if (!cancelled) {
+          window.location.href = `${basePath}/auth/login?error=${encodeURIComponent(
+            appTag ? `not_allowed:${appTag}` : 'not_allowed'
+          )}`;
+        }
+      }
+    };
+    validateSession();
     api.getMe()
       .then((userData) => {
         if (cancelled) return;

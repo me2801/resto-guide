@@ -10,6 +10,7 @@ import LocationCard from '@/components/mobile/LocationCard';
 import Map from '@/components/mobile/Map';
 import { api, City, Tag, Location, User } from '@/lib/mobile/api';
 import { withBase } from '@/lib/basePath';
+import { getSupabaseClient, hasAppAccess } from '@/lib/supabaseClient';
 
 type ViewMode = 'list' | 'map';
 
@@ -31,10 +32,34 @@ export default function HomePage() {
 
   // Check auth status
   useEffect(() => {
-    api.getMe()
-      .then(setUser)
-      .catch(() => setUser(null))
-      .finally(() => setAuthChecked(true));
+    let cancelled = false;
+    const check = async () => {
+      const client = getSupabaseClient();
+      if (client) {
+        const { data } = await client.auth.getSession();
+        if (data.session?.user && !hasAppAccess(data.session.user)) {
+          await client.auth.signOut();
+          if (!cancelled) {
+            window.location.href = withBase('/mobile/auth/login?error=not_allowed');
+            return;
+          }
+        }
+      }
+      api.getMe()
+        .then((userData) => {
+          if (!cancelled) setUser(userData);
+        })
+        .catch(() => {
+          if (!cancelled) setUser(null);
+        })
+        .finally(() => {
+          if (!cancelled) setAuthChecked(true);
+        });
+    };
+    check();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Load initial data when authenticated

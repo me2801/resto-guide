@@ -1,11 +1,9 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { withBase } from '@/lib/basePath';
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
-const AUTH_BASE = API_BASE ? API_BASE.replace(/\/api\/?$/, '') : '';
+import { getSupabaseClient, hasAppAccess } from '@/lib/supabaseClient';
 
 export default function WebLoginClient() {
   const searchParams = useSearchParams();
@@ -13,11 +11,19 @@ export default function WebLoginClient() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const errorParam = searchParams.get('error');
+  const invalidCredsMessage = 'Invalid email or password.';
 
   const nextPath = useMemo(() => {
     const next = searchParams.get('next');
     return next || withBase('/web');
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!error && errorParam?.startsWith('not_allowed')) {
+      setError(invalidCredsMessage);
+    }
+  }, [error, errorParam, invalidCredsMessage]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -30,19 +36,25 @@ export default function WebLoginClient() {
 
     setSubmitting(true);
     try {
-      const authUrl = AUTH_BASE ? `${AUTH_BASE}/auth/api/login` : withBase('/auth/api/login');
-      const res = await fetch(authUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password, next: nextPath }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(payload.error || 'Authentication failed.');
+      const client = getSupabaseClient();
+      if (!client) {
+        setError('Supabase is not configured.');
         return;
       }
-      window.location.href = payload.redirect || nextPath;
+      const { data, error: authError } = await client.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (authError || !data?.user) {
+        setError(invalidCredsMessage);
+        return;
+      }
+      if (!hasAppAccess(data.user)) {
+        await client.auth.signOut();
+        setError(invalidCredsMessage);
+        return;
+      }
+      window.location.href = nextPath;
     } catch {
       setError('Network error. Please try again.');
     } finally {

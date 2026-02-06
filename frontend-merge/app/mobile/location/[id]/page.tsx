@@ -1,7 +1,6 @@
 import LocationDetailClient from './location-detail-client';
-import { withBase } from '@/lib/basePath';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || withBase('/api')).replace(/\/$/, '');
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
 const STATIC_LOCATION_IDS = (process.env.NEXT_PUBLIC_STATIC_LOCATION_IDS || '')
   .split(',')
   .map((id) => id.trim())
@@ -16,7 +15,7 @@ export const dynamic = 'force-static';
 export async function generateStaticParams() {
   if (!API_BASE) return ensureParams([]);
   try {
-    const res = await fetch(`${API_BASE}/locations`, { cache: 'no-store' });
+    const res = await fetch(`${API_BASE}/api/locations`, { cache: 'no-store' });
     if (!res.ok) return ensureParams([]);
     const locations = await res.json();
     const params = Array.isArray(locations)

@@ -6,6 +6,8 @@ export type AuthUser = {
   email: string;
   roles: string[];
   is_admin: boolean;
+  hidden_tags: string[];
+  has_app_access: boolean;
 };
 
 declare module 'express-session' {
@@ -60,6 +62,10 @@ function supabaseAnonKey(): string {
 
 function supabaseServiceRoleKey(): string {
   return (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+}
+
+function requiredAppTag(): string {
+  return (process.env.RESTO_TAG || '').trim();
 }
 
 export function isConfigured(): boolean {
@@ -168,23 +174,45 @@ function normalizeRoles(roles: unknown): string[] {
   return [];
 }
 
+function normalizeHiddenTags(tags: unknown): string[] {
+  if (Array.isArray(tags)) return tags.map(String);
+  if (typeof tags === 'string' && tags.trim()) return [tags.trim()];
+  return [];
+}
+
+function hasRequiredTag(tags: unknown): boolean {
+  const tag = requiredAppTag();
+  if (!tag) return true;
+  const hiddenTags = normalizeHiddenTags(tags);
+  return hiddenTags.map((t) => t.toLowerCase()).includes(tag.toLowerCase());
+}
+
 function mapUser(user: any, fallbackEmail: string): AuthUser {
   const appMetadata = user?.app_metadata || {};
   const roles = normalizeRoles(appMetadata.roles);
+  const hiddenTags = normalizeHiddenTags(appMetadata.hidden_tags);
   return {
     user_id: user.id,
     email: user.email || fallbackEmail,
     roles,
     is_admin: roles.map((r) => r.toLowerCase()).includes('admin'),
+    hidden_tags: hiddenTags,
+    has_app_access: hasRequiredTag(hiddenTags),
   };
+}
+
+function enforceAppAccess(authUser: AuthUser | null): AuthUser | null {
+  if (!authUser) return null;
+  if (!hasRequiredTag(authUser.hidden_tags)) return null;
+  return authUser;
 }
 
 export function getUser(req: Request): AuthUser | null {
   const authUser = req.authUser;
-  if (authUser?.user_id) return authUser;
+  if (authUser?.user_id) return enforceAppAccess(authUser);
 
   const auth = (req.session as any)?.auth;
-  if (auth && auth.user_id) return auth as AuthUser;
+  if (auth && auth.user_id) return enforceAppAccess(auth as AuthUser);
   return null;
 }
 
@@ -220,6 +248,7 @@ async function authenticateBearer(req: Request): Promise<AuthUser | null> {
   if (!user) return null;
 
   const authUser = mapUser(user, user.email || '');
+  if (!hasRequiredTag(authUser.hidden_tags)) return null;
   req.authUser = authUser;
   return authUser;
 }
@@ -278,6 +307,31 @@ export function requireAdminApi() {
   };
 }
 
+export function guardAppTag() {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const tag = requiredAppTag();
+    if (!tag) {
+      return next();
+    }
+
+    const sessionAuth = (req.session as any)?.auth;
+    const header = req.headers.authorization || '';
+    const [scheme, token] = header.split(' ');
+    const hasBearer = Boolean(token) && scheme.toLowerCase() === 'bearer';
+
+    if (!hasBearer && !(sessionAuth && sessionAuth.user_id)) {
+      return next();
+    }
+
+    const user = await ensureAuthUser(req);
+    if (!user) {
+      return res.status(403).json({ ok: false, error: 'Forbidden' });
+    }
+
+    next();
+  };
+}
+
 export function registerAuth(config: Partial<AuthConfig> = {}) {
   const cfg = { ...defaultAuthConfig, ...config };
   const router = Router();
@@ -323,6 +377,12 @@ export function registerAuth(config: Partial<AuthConfig> = {}) {
       }
 
       const authUser = mapUser(data.user, email);
+      if (!authUser.has_app_access) {
+        return res.status(403).json({
+          ok: false,
+          error: 'Access not allowed for this app.',
+        });
+      }
       (req.session as any).auth = authUser;
 
       req.session.save((err) => {

@@ -1,8 +1,8 @@
 import { debug } from './debug';
-import { withBase } from '../basePath';
+import { getAccessToken, getSupabaseClient } from '../supabaseClient';
 
-// Use base-path aware relative paths - Next.js rewrites will proxy to API
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || withBase('/api')).replace(/\/$/, '');
+// Use absolute backend URL (without /api). If unset, fall back to relative /api/*.
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
 
 interface FetchOptions extends RequestInit {
   params?: Record<string, string | number | undefined>;
@@ -28,11 +28,13 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
 
   debug.log(`API Request: ${fetchOptions.method || 'GET'} ${url}`);
 
+  const token = await getAccessToken();
   const response = await fetch(url, {
     ...fetchOptions,
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...fetchOptions.headers,
     },
   });
@@ -112,37 +114,37 @@ export interface UploadResult {
 // API functions
 export const api = {
   // Health
-  health: () => apiFetch<{ status: string; timestamp: string }>('/health'),
+  health: () => apiFetch<{ status: string; timestamp: string }>('/api/health'),
 
   // Cities
-  getCities: () => apiFetch<City[]>('/cities'),
+  getCities: () => apiFetch<City[]>('/api/cities'),
 
   // Tags
-  getTags: () => apiFetch<Tag[]>('/tags'),
+  getTags: () => apiFetch<Tag[]>('/api/tags'),
 
   // Locations
-  getLocations: () => apiFetch<Location[]>('/admin/locations'),
+  getLocations: () => apiFetch<Location[]>('/api/admin/locations'),
 
-  getLocation: (id: string) => apiFetch<Location>(`/locations/${id}`),
+  getLocation: (id: string) => apiFetch<Location>(`/api/locations/${id}`),
 
   // User
-  getMe: () => apiFetch<User>('/me'),
+  getMe: () => apiFetch<User>('/api/me'),
 
   // Admin
   admin: {
     createTag: (data: Partial<Tag>) =>
-      apiFetch<Tag>('/admin/tags', { method: 'POST', body: JSON.stringify(data) }),
+      apiFetch<Tag>('/api/admin/tags', { method: 'POST', body: JSON.stringify(data) }),
     updateTag: (id: string, data: Partial<Tag>) =>
-      apiFetch<Tag>(`/admin/tags/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      apiFetch<Tag>(`/api/admin/tags/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     deleteTag: (id: string) =>
-      apiFetch<{ message: string }>(`/admin/tags/${id}`, { method: 'DELETE' }),
+      apiFetch<{ message: string }>(`/api/admin/tags/${id}`, { method: 'DELETE' }),
 
     createLocation: (data: Partial<Location> & { tag_ids?: string[] }) =>
-      apiFetch<Location>('/admin/locations', { method: 'POST', body: JSON.stringify(data) }),
+      apiFetch<Location>('/api/admin/locations', { method: 'POST', body: JSON.stringify(data) }),
     updateLocation: (id: string, data: Partial<Location> & { tag_ids?: string[] }) =>
-      apiFetch<Location>(`/admin/locations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      apiFetch<Location>(`/api/admin/locations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     deleteLocation: (id: string) =>
-      apiFetch<{ message: string }>(`/admin/locations/${id}`, { method: 'DELETE' }),
+      apiFetch<{ message: string }>(`/api/admin/locations/${id}`, { method: 'DELETE' }),
 
     lookupAddress: (params: { postcode: string; house_number: string; house_number_addition?: string }) =>
       apiFetch<{
@@ -154,20 +156,23 @@ export const api = {
         lat: number | null;
         lng: number | null;
         address: string | null;
-      }>('/admin/address-lookup', { params }),
+      }>('/api/admin/address-lookup', { params }),
 
     // Storage
-    getStorageInfo: () => apiFetch<StorageInfo>('/admin/storage/info'),
+    getStorageInfo: () => apiFetch<StorageInfo>('/api/admin/storage/info'),
 
     uploadImage: async (file: File, folder: string = 'general'): Promise<UploadResult> => {
       debug.log(`Uploading image: ${file.name} (${file.size} bytes) to ${folder}`);
 
-      const response = await fetch(`${API_BASE}/admin/upload`, {
+      const token = await getAccessToken();
+      const uploadUrl = API_BASE ? `${API_BASE}/api/admin/upload` : '/api/admin/upload';
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'X-File-Type': file.type,
           'X-Folder': folder,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: file,
       });
@@ -181,7 +186,7 @@ export const api = {
     },
 
     deleteImage: (url: string) =>
-      apiFetch<{ message: string }>('/admin/upload', {
+      apiFetch<{ message: string }>('/api/admin/upload', {
         method: 'DELETE',
         body: JSON.stringify({ url }),
       }),
@@ -190,13 +195,10 @@ export const api = {
 
 export async function logout(): Promise<void> {
   debug.log('Logging out...');
-  const authBase = process.env.NEXT_PUBLIC_API_BASE_URL
-    ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/api\/?$/, '')
-    : '';
-  const authUrl = authBase ? `${authBase}/auth/logout` : withBase('/auth/logout');
-  const res = await fetch(authUrl, {
-    method: 'GET',
-    credentials: 'include',
-  });
-  debug.log('Logout response:', res.status);
+  const client = getSupabaseClient();
+  if (!client) return;
+  const { error } = await client.auth.signOut();
+  if (error) {
+    debug.error('Logout error:', error.message);
+  }
 }

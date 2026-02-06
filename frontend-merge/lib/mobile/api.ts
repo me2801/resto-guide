@@ -1,31 +1,8 @@
 import { debug } from './debug';
-import { withBase } from '../basePath';
+import { getAccessToken } from '../supabaseClient';
 
-// Use base-path aware relative paths - Next.js rewrites will proxy to API
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || withBase('/api')).replace(/\/$/, '');
-const TOKEN_STORAGE_KEY = 'resto_auth_token';
-
-export function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    return window.localStorage.getItem(TOKEN_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function setAuthToken(token: string | null) {
-  if (typeof window === 'undefined') return;
-  try {
-    if (token) {
-      window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
-    } else {
-      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
-    }
-  } catch {
-    // Ignore storage errors (private mode, disabled storage)
-  }
-}
+// Use absolute backend URL (without /api). If unset, fall back to relative /api/*.
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
 
 interface FetchOptions extends RequestInit {
   params?: Record<string, string | number | undefined>;
@@ -51,7 +28,7 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
 
   debug.log(`API Request: ${fetchOptions.method || 'GET'} ${url}`);
 
-  const token = getAuthToken();
+  const token = await getAccessToken();
   const response = await fetch(url, {
     ...fetchOptions,
     credentials: 'include',
@@ -122,13 +99,13 @@ export interface User {
 // API functions
 export const api = {
   // Health
-  health: () => apiFetch<{ status: string; timestamp: string }>('/health'),
+  health: () => apiFetch<{ status: string; timestamp: string }>('/api/health'),
 
   // Cities
-  getCities: () => apiFetch<City[]>('/cities'),
+  getCities: () => apiFetch<City[]>('/api/cities'),
 
   // Tags
-  getTags: () => apiFetch<Tag[]>('/tags'),
+  getTags: () => apiFetch<Tag[]>('/api/tags'),
 
   // Locations
   getLocations: (params?: {
@@ -137,18 +114,18 @@ export const api = {
     tag_slugs?: string;
     price_min?: number;
     price_max?: number;
-  }) => apiFetch<Location[]>('/locations', { params }),
+  }) => apiFetch<Location[]>('/api/locations', { params }),
 
-  getLocation: (id: string) => apiFetch<Location>(`/locations/${id}`),
+  getLocation: (id: string) => apiFetch<Location>(`/api/locations/${id}`),
 
   // User
-  getMe: () => apiFetch<User>('/me'),
+  getMe: () => apiFetch<User>('/api/me'),
 
-  getFavorites: () => apiFetch<Location[]>('/me/favorites'),
+  getFavorites: () => apiFetch<Location[]>('/api/me/favorites'),
 
   addFavorite: (locationId: string) =>
-    apiFetch<{ message: string }>(`/me/favorites/${locationId}`, { method: 'POST' }),
+    apiFetch<{ message: string }>(`/api/me/favorites/${locationId}`, { method: 'POST' }),
 
   removeFavorite: (locationId: string) =>
-    apiFetch<{ message: string }>(`/me/favorites/${locationId}`, { method: 'DELETE' }),
+    apiFetch<{ message: string }>(`/api/me/favorites/${locationId}`, { method: 'DELETE' }),
 };

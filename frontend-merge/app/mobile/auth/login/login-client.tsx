@@ -1,12 +1,9 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { setAuthToken } from '@/lib/mobile/api';
 import { withBase } from '@/lib/basePath';
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
-const AUTH_BASE = API_BASE ? API_BASE.replace(/\/api\/?$/, '') : '';
+import { getSupabaseClient, hasAppAccess } from '@/lib/supabaseClient';
 
 export default function MobileLoginClient() {
   const searchParams = useSearchParams();
@@ -14,6 +11,15 @@ export default function MobileLoginClient() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const errorParam = searchParams.get('error');
+
+  const invalidCredsMessage = 'Invalid email or password.';
+
+  useEffect(() => {
+    if (!error && errorParam?.startsWith('not_allowed')) {
+      setError(invalidCredsMessage);
+    }
+  }, [error, errorParam, invalidCredsMessage]);
 
   const nextPath = useMemo(() => {
     const next = searchParams.get('next');
@@ -31,25 +37,25 @@ export default function MobileLoginClient() {
 
     setSubmitting(true);
     try {
-      const authUrl = AUTH_BASE ? `${AUTH_BASE}/auth/api/login` : withBase('/auth/api/login');
-      const res = await fetch(authUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password, next: nextPath }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(payload.error || 'Authentication failed.');
-        setAuthToken(null);
+      const client = getSupabaseClient();
+      if (!client) {
+        setError('Supabase is not configured.');
         return;
       }
-      if (payload?.token) {
-        setAuthToken(payload.token);
-      } else {
-        setAuthToken(null);
+      const { data, error: authError } = await client.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (authError || !data?.user) {
+        setError(invalidCredsMessage);
+        return;
       }
-      window.location.href = payload.redirect || nextPath;
+      if (!hasAppAccess(data.user)) {
+        await client.auth.signOut();
+        setError(invalidCredsMessage);
+        return;
+      }
+      window.location.href = nextPath;
     } catch {
       setError('Network error. Please try again.');
     } finally {

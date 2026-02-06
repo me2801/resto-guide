@@ -11,6 +11,7 @@ import {
   registerAuth,
   isAuthenticated,
   isAdmin,
+  guardAppTag,
   requireAuthApi,
   requireAdminApi,
   getClient,
@@ -196,14 +197,14 @@ app.get('/api/health', async (_req, res) => {
   });
 });
 
-// Public routes
-app.use('/api', publicRoutes);
+// Public routes (deny access for invalid app tag when auth is present)
+app.use('/api', guardAppTag(), publicRoutes);
 
 // User routes (auth required)
-app.use('/api/me', requireAuthApi(), userRoutes);
+app.use('/api/me', guardAppTag(), requireAuthApi(), userRoutes);
 
 // Admin routes (admin required)
-app.use('/api/admin', requireAdminApi(), adminRoutes);
+app.use('/api/admin', guardAppTag(), requireAdminApi(), adminRoutes);
 
 // Error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
