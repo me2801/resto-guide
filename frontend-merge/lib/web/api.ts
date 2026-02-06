@@ -1,7 +1,8 @@
 import { debug } from './debug';
+import { withBase } from '../basePath';
 
-// Use absolute backend URL for static export
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
+// Use base-path aware relative paths - Next.js rewrites will proxy to API
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || withBase('/api')).replace(/\/$/, '');
 
 interface FetchOptions extends RequestInit {
   params?: Record<string, string | number | undefined>;
@@ -111,37 +112,37 @@ export interface UploadResult {
 // API functions
 export const api = {
   // Health
-  health: () => apiFetch<{ status: string; timestamp: string }>('/api/health'),
+  health: () => apiFetch<{ status: string; timestamp: string }>('/health'),
 
   // Cities
-  getCities: () => apiFetch<City[]>('/api/cities'),
+  getCities: () => apiFetch<City[]>('/cities'),
 
   // Tags
-  getTags: () => apiFetch<Tag[]>('/api/tags'),
+  getTags: () => apiFetch<Tag[]>('/tags'),
 
   // Locations
-  getLocations: () => apiFetch<Location[]>('/api/admin/locations'),
+  getLocations: () => apiFetch<Location[]>('/admin/locations'),
 
-  getLocation: (id: string) => apiFetch<Location>(`/api/locations/${id}`),
+  getLocation: (id: string) => apiFetch<Location>(`/locations/${id}`),
 
   // User
-  getMe: () => apiFetch<User>('/api/me'),
+  getMe: () => apiFetch<User>('/me'),
 
   // Admin
   admin: {
     createTag: (data: Partial<Tag>) =>
-      apiFetch<Tag>('/api/admin/tags', { method: 'POST', body: JSON.stringify(data) }),
+      apiFetch<Tag>('/admin/tags', { method: 'POST', body: JSON.stringify(data) }),
     updateTag: (id: string, data: Partial<Tag>) =>
-      apiFetch<Tag>(`/api/admin/tags/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      apiFetch<Tag>(`/admin/tags/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     deleteTag: (id: string) =>
-      apiFetch<{ message: string }>(`/api/admin/tags/${id}`, { method: 'DELETE' }),
+      apiFetch<{ message: string }>(`/admin/tags/${id}`, { method: 'DELETE' }),
 
     createLocation: (data: Partial<Location> & { tag_ids?: string[] }) =>
-      apiFetch<Location>('/api/admin/locations', { method: 'POST', body: JSON.stringify(data) }),
+      apiFetch<Location>('/admin/locations', { method: 'POST', body: JSON.stringify(data) }),
     updateLocation: (id: string, data: Partial<Location> & { tag_ids?: string[] }) =>
-      apiFetch<Location>(`/api/admin/locations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      apiFetch<Location>(`/admin/locations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     deleteLocation: (id: string) =>
-      apiFetch<{ message: string }>(`/api/admin/locations/${id}`, { method: 'DELETE' }),
+      apiFetch<{ message: string }>(`/admin/locations/${id}`, { method: 'DELETE' }),
 
     lookupAddress: (params: { postcode: string; house_number: string; house_number_addition?: string }) =>
       apiFetch<{
@@ -153,15 +154,15 @@ export const api = {
         lat: number | null;
         lng: number | null;
         address: string | null;
-      }>('/api/admin/address-lookup', { params }),
+      }>('/admin/address-lookup', { params }),
 
     // Storage
-    getStorageInfo: () => apiFetch<StorageInfo>('/api/admin/storage/info'),
+    getStorageInfo: () => apiFetch<StorageInfo>('/admin/storage/info'),
 
     uploadImage: async (file: File, folder: string = 'general'): Promise<UploadResult> => {
       debug.log(`Uploading image: ${file.name} (${file.size} bytes) to ${folder}`);
 
-      const response = await fetch('/api/admin/upload', {
+      const response = await fetch(`${API_BASE}/admin/upload`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -180,7 +181,7 @@ export const api = {
     },
 
     deleteImage: (url: string) =>
-      apiFetch<{ message: string }>('/api/admin/upload', {
+      apiFetch<{ message: string }>('/admin/upload', {
         method: 'DELETE',
         body: JSON.stringify({ url }),
       }),
@@ -189,7 +190,11 @@ export const api = {
 
 export async function logout(): Promise<void> {
   debug.log('Logging out...');
-  const res = await fetch(`${API_BASE}/auth/logout`, {
+  const authBase = process.env.NEXT_PUBLIC_API_BASE_URL
+    ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/api\/?$/, '')
+    : '';
+  const authUrl = authBase ? `${authBase}/auth/logout` : withBase('/auth/logout');
+  const res = await fetch(authUrl, {
     method: 'GET',
     credentials: 'include',
   });

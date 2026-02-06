@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, User } from '@/lib/mobile/api';
+import { withBase } from '@/lib/basePath';
 
 function SunIcon() {
   return (
@@ -62,7 +63,7 @@ export default function Header() {
   return (
     <header className="header">
       <div className="header__inner">
-        <Link href="/mobile" className="header__logo">
+        <Link href={withBase('/mobile')} className="header__logo">
           Resto
         </Link>
         <nav className="header__nav">
@@ -75,15 +76,15 @@ export default function Header() {
               >
                 {isDark ? <SunIcon /> : <MoonIcon />}
               </button>
-              <Link href="/mobile/favorites" className="btn btn--ghost btn--small">
+              <Link href={withBase('/mobile/favorites')} className="btn btn--ghost btn--small">
                 Saved
               </Link>
-              <Link href="/mobile/auth/logout" className="btn btn--secondary btn--small">
+              <Link href={withBase('/mobile/auth/logout')} className="btn btn--secondary btn--small">
                 Logout
               </Link>
             </>
           ) : (
-            <Link href="/mobile/auth/login" className="btn btn--primary btn--small">
+            <Link href={withBase('/mobile/auth/login')} className="btn btn--primary btn--small">
               Sign In
             </Link>
           )}

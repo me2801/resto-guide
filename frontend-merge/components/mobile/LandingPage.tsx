@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { withBase } from '@/lib/basePath';
 
 export default function LandingPage() {
   useEffect(() => {
@@ -24,10 +25,10 @@ export default function LandingPage() {
             recommendations.
           </p>
           <div className="landing__cta">
-            <Link href="/mobile/auth/login" className="btn btn--primary">
+            <Link href={withBase('/mobile/auth/login')} className="btn btn--primary">
               Sign In to Start
             </Link>
-            <Link href="/mobile/discover" className="btn btn--secondary">
+            <Link href={withBase('/mobile/discover')} className="btn btn--secondary">
               Browse Restaurants
             </Link>
           </div>

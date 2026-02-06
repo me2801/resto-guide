@@ -1,7 +1,8 @@
 import { debug } from './debug';
+import { withBase } from '../basePath';
 
-// Use absolute backend URL for static export
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
+// Use base-path aware relative paths - Next.js rewrites will proxy to API
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || withBase('/api')).replace(/\/$/, '');
 const TOKEN_STORAGE_KEY = 'resto_auth_token';
 
 export function getAuthToken(): string | null {
@@ -121,13 +122,13 @@ export interface User {
 // API functions
 export const api = {
   // Health
-  health: () => apiFetch<{ status: string; timestamp: string }>('/api/health'),
+  health: () => apiFetch<{ status: string; timestamp: string }>('/health'),
 
   // Cities
-  getCities: () => apiFetch<City[]>('/api/cities'),
+  getCities: () => apiFetch<City[]>('/cities'),
 
   // Tags
-  getTags: () => apiFetch<Tag[]>('/api/tags'),
+  getTags: () => apiFetch<Tag[]>('/tags'),
 
   // Locations
   getLocations: (params?: {
@@ -136,18 +137,18 @@ export const api = {
     tag_slugs?: string;
     price_min?: number;
     price_max?: number;
-  }) => apiFetch<Location[]>('/api/locations', { params }),
+  }) => apiFetch<Location[]>('/locations', { params }),
 
-  getLocation: (id: string) => apiFetch<Location>(`/api/locations/${id}`),
+  getLocation: (id: string) => apiFetch<Location>(`/locations/${id}`),
 
   // User
-  getMe: () => apiFetch<User>('/api/me'),
+  getMe: () => apiFetch<User>('/me'),
 
-  getFavorites: () => apiFetch<Location[]>('/api/me/favorites'),
+  getFavorites: () => apiFetch<Location[]>('/me/favorites'),
 
   addFavorite: (locationId: string) =>
-    apiFetch<{ message: string }>(`/api/me/favorites/${locationId}`, { method: 'POST' }),
+    apiFetch<{ message: string }>(`/me/favorites/${locationId}`, { method: 'POST' }),
 
   removeFavorite: (locationId: string) =>
-    apiFetch<{ message: string }>(`/api/me/favorites/${locationId}`, { method: 'DELETE' }),
+    apiFetch<{ message: string }>(`/me/favorites/${locationId}`, { method: 'DELETE' }),
 };
