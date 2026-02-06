@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import LocationCard from '@/components/LocationCard';
 import { api, Location, User } from '@/lib/api';
+import { withBase } from '@/lib/basePath';
 
 export default function FavoritesPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -38,7 +39,7 @@ export default function FavoritesPage() {
         <div className="favorites-empty">
           <h2>Sign in to see your saved places</h2>
           <p style={{ marginTop: 16 }}>
-            <Link href="/auth/login" className="btn btn--primary">
+            <Link href={withBase('/auth/login')} className="btn btn--primary">
               Sign In
             </Link>
           </p>

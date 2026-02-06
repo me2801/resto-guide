@@ -9,6 +9,7 @@ import FilterBar from '@/components/FilterBar';
 import LocationCard from '@/components/LocationCard';
 import Map from '@/components/Map';
 import { api, City, Tag, Location, User } from '@/lib/api';
+import { withBase } from '@/lib/basePath';
 
 type ViewMode = 'list' | 'map';
 
@@ -73,7 +74,7 @@ export default function HomePage() {
 
   const handleLocationClick = useCallback(
     (locationId: string) => {
-      router.push(`/location/${locationId}`);
+      router.push(withBase(`/location/${locationId}`));
     },
     [router]
   );

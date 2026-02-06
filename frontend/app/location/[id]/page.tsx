@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { api, Location, User } from '@/lib/api';
+import { withBase } from '@/lib/basePath';
 
 export default function LocationDetailPage() {
   const params = useParams();
@@ -39,7 +40,7 @@ export default function LocationDetailPage() {
   const handleToggleFavorite = async () => {
     if (!user) {
       // Redirect to login
-      window.location.href = '/auth/login';
+      window.location.href = withBase('/auth/login');
       return;
     }
 

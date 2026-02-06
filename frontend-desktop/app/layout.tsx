@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { api, logout, User } from '@/lib/api';
+import { withBase } from '@/lib/basePath';
 import './globals.css';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -16,18 +17,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       .then((userData) => {
         setUser(userData);
         if (!userData.roles?.includes('admin')) {
-          window.location.href = '/auth/login?error=not_admin';
+          window.location.href = withBase('/auth/login?error=not_admin');
         }
       })
       .catch(() => {
-        window.location.href = '/auth/login';
+        window.location.href = withBase('/auth/login');
       })
       .finally(() => setLoading(false));
   }, []);
 
+  const isActive = (target: string) =>
+    pathname.replace(/\/$/, '') === withBase(target).replace(/\/$/, '');
+
   const handleLogout = async () => {
     await logout();
-    window.location.href = '/auth/login';
+    window.location.href = withBase('/auth/login');
   };
 
   if (loading) {
@@ -71,20 +75,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
             <nav className="admin-sidebar__nav">
               <Link
-                href="/"
-                className={`admin-sidebar__link ${pathname === '/' ? 'admin-sidebar__link--active' : ''}`}
+                href={withBase('/')}
+                className={`admin-sidebar__link ${isActive('/') ? 'admin-sidebar__link--active' : ''}`}
               >
                 Dashboard
               </Link>
               <Link
-                href="/tags"
-                className={`admin-sidebar__link ${pathname === '/tags' ? 'admin-sidebar__link--active' : ''}`}
+                href={withBase('/tags')}
+                className={`admin-sidebar__link ${isActive('/tags') ? 'admin-sidebar__link--active' : ''}`}
               >
                 Tags
               </Link>
               <Link
-                href="/locations"
-                className={`admin-sidebar__link ${pathname === '/locations' ? 'admin-sidebar__link--active' : ''}`}
+                href={withBase('/locations')}
+                className={`admin-sidebar__link ${isActive('/locations') ? 'admin-sidebar__link--active' : ''}`}
               >
                 Locations
               </Link>

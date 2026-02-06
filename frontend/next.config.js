@@ -1,9 +1,12 @@
 /** @type {import('next').NextConfig} */
-const basePath = process.env.SINGLE_SERVICE === 'true' ? '/mobile' : undefined;
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 const nextConfig = {
-  basePath,
+  basePath: basePath || undefined,
+  assetPrefix: basePath || undefined,
+  output: 'export',
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',

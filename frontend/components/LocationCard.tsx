@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Location } from '@/lib/api';
+import { withBase } from '@/lib/basePath';
 
 interface LocationCardProps {
   location: Location;
@@ -13,7 +14,7 @@ export default function LocationCard({ location }: LocationCardProps) {
     : null;
 
   return (
-    <Link href={`/location/${location.id}`} className="card">
+    <Link href={withBase(`/location/${location.id}`)} className="card">
       {location.hero_image_url && (
         <img
           src={location.hero_image_url}
