@@ -2,8 +2,10 @@
 
 import { FormEvent, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { withBase } from '@/lib/basePath';
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
+const AUTH_BASE = API_BASE ? API_BASE.replace(/\/api\/?$/, '') : '';
 
 export default function WebLoginClient() {
   const searchParams = useSearchParams();
@@ -14,7 +16,7 @@ export default function WebLoginClient() {
 
   const nextPath = useMemo(() => {
     const next = searchParams.get('next');
-    return next || '/web';
+    return next || withBase('/web');
   }, [searchParams]);
 
   const handleSubmit = async (event: FormEvent) => {
@@ -28,7 +30,8 @@ export default function WebLoginClient() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/api/login`, {
+      const authUrl = AUTH_BASE ? `${AUTH_BASE}/auth/api/login` : withBase('/auth/api/login');
+      const res = await fetch(authUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -85,7 +88,7 @@ export default function WebLoginClient() {
           <button className="btn btn--primary" type="submit" disabled={submitting}>
             {submitting ? 'Signing in...' : 'Sign In'}
           </button>
-          <a className="btn btn--ghost" href="/web" style={{ marginLeft: 8 }}>
+          <a className="btn btn--ghost" href={withBase('/web')} style={{ marginLeft: 8 }}>
             Back to dashboard
           </a>
         </form>

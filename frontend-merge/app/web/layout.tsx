@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { api, logout, User } from '@/lib/web/api';
+import { withBase } from '@/lib/basePath';
 import './globals.css';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const basePath = '/web';
+  const basePath = withBase('/web');
   const isAuthRoute = pathname?.startsWith(`${basePath}/auth`);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(!isAuthRoute);

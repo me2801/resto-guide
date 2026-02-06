@@ -3,8 +3,10 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { setAuthToken } from '@/lib/mobile/api';
+import { withBase } from '@/lib/basePath';
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
+const AUTH_BASE = API_BASE ? API_BASE.replace(/\/api\/?$/, '') : '';
 
 export default function MobileLoginClient() {
   const searchParams = useSearchParams();
@@ -15,7 +17,7 @@ export default function MobileLoginClient() {
 
   const nextPath = useMemo(() => {
     const next = searchParams.get('next');
-    return next || '/mobile';
+    return next || withBase('/mobile');
   }, [searchParams]);
 
   const handleSubmit = async (event: FormEvent) => {
@@ -29,7 +31,8 @@ export default function MobileLoginClient() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/api/login`, {
+      const authUrl = AUTH_BASE ? `${AUTH_BASE}/auth/api/login` : withBase('/auth/api/login');
+      const res = await fetch(authUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -100,7 +103,7 @@ export default function MobileLoginClient() {
         </form>
 
         <div className="auth-footer">
-          <a className="auth-link" href="/mobile">Back to home</a>
+          <a className="auth-link" href={withBase('/mobile')}>Back to home</a>
         </div>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/mobile/Header';
 import { api, Location, User } from '@/lib/mobile/api';
+import { withBase } from '@/lib/basePath';
 
 export default function LocationDetailClient({ id }: { id: string }) {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function LocationDetailClient({ id }: { id: string }) {
   const handleToggleFavorite = async () => {
     if (!user) {
       // Redirect to login
-      window.location.href = '/mobile/auth/login';
+      window.location.href = withBase('/mobile/auth/login');
       return;
     }
 

@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from 'next';
+import { withBase } from '@/lib/basePath';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Resto Discovery',
   description: 'Discover curated restaurants in Dutch cities',
-  manifest: '/manifest.json',
+  manifest: withBase('/manifest.json'),
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
